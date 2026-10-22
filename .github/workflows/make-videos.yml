@@ -1,0 +1,41 @@
+name: Make cat videos
+
+on:
+  workflow_dispatch:
+    inputs:
+      count:
+        description: "How many videos to generate"
+        required: true
+        default: "10"
+
+jobs:
+  make:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ffmpeg and boto3
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          pip install -r requirements.txt
+
+      - name: Install rclone (for Google Drive upload)
+        run: curl -fsSL https://rclone.org/install.sh | sudo bash
+
+      - name: Render videos and upload
+        env:
+          UPLOAD_TO: gdrive
+          GDRIVE_FOLDER: CatVideos
+          GDRIVE_TOKEN: ${{ secrets.GDRIVE_TOKEN }}
+          COUNT: ${{ inputs.count }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+        run: python r2_job.py --count "$COUNT" --workers 2
